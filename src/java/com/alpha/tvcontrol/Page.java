@@ -152,7 +152,7 @@ final class Page {
       .catch(offline)
       .finally(() => clearTimeout(t));
   }
-  setInterval(ping, 4000);
+  setInterval(ping, 10000);
   document.addEventListener('visibilitychange', ping);
   window.addEventListener('online', ping);
   window.addEventListener('offline', offline);
