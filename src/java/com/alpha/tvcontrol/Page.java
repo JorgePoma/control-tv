@@ -43,6 +43,8 @@ final class Page {
   .top { display:flex; align-items:center; gap:12px; }
   button.icon { width:36px; height:36px; border-radius:50%; padding:0; }
   button.icon svg { width:19px; height:19px; }
+  #pwr { color:#ff5252; }
+  #pwr.standby { color:#3ddc84; }
   #snd .off-ic, #snd.muted .on-ic { display:none; }
   #snd.muted .off-ic { display:block; }
   #snd.muted { color:var(--dim); }
@@ -92,6 +94,9 @@ final class Page {
     <h1>Control TV</h1>
     <div class="top">
       <span id="st">Conectado</span>
+      <button id="pwr" class="icon" aria-label="Encender o apagar">
+        <svg viewBox="0 0 24 24"><path d="M12 3v9"/><path d="M6.4 6.4a8 8 0 1 0 11.2 0"/></svg>
+      </button>
       <button id="snd" class="icon" aria-label="Sonido de botones">
         <svg class="on-ic" viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>
         <svg class="off-ic" viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="m16 9 5 6M21 9l-5 6"/></svg>
@@ -103,9 +108,9 @@ final class Page {
   <div class="row">
     <button data-k="158" aria-label="Atrás"><svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg></button>
     <button data-k="102" aria-label="Inicio"><svg viewBox="0 0 24 24"><path d="M3 11 12 3l9 8"/><path d="M5 10v10h14V10"/></svg></button>
-    <button data-k="139" aria-label="Menú"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+    <button id="set" aria-label="Ajustes"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
   </div>
-  <div class="label" style="display:grid;grid-template-columns:repeat(3,1fr)"><span>Atrás</span><span>Inicio</span><span>Menú</span></div>
+  <div class="label" style="display:grid;grid-template-columns:repeat(3,1fr)"><span>Atrás</span><span>Inicio</span><span>Ajustes</span></div>
 
   <div class="pad">
     <button class="up" data-k="103" aria-label="Arriba"><svg viewBox="0 0 24 24"><path d="m6 15 6-6 6 6"/></svg></button>
@@ -190,6 +195,28 @@ final class Page {
     if (b && b !== snd) drop();
   }, true);
 
+  // Power: red when the box is on (tap to sleep, with confirmation), green in standby (tap to wake).
+  const pwr = document.getElementById('pwr');
+  let boxOn = true;
+  function setPower(on) {
+    boxOn = on;
+    pwr.classList.toggle('standby', !on);
+    pwr.setAttribute('aria-label', on ? 'Apagar' : 'Encender');
+  }
+  function checkPower() {
+    fetch('/power', { cache: 'no-store' }).then(r => r.json()).then(j => setPower(j.on)).catch(() => {});
+  }
+  pwr.addEventListener('click', () => {
+    if (boxOn && !confirm('¿Apagar la caja? Podrás encenderla de nuevo desde aquí.')) return;
+    fetch('/power?toggle=1', { cache: 'no-store' })
+      .then(r => { if (!r.ok) throw 0; setStatus(true); setTimeout(checkPower, 1500); })
+      .catch(offline);
+  });
+  checkPower();
+  document.getElementById('set').addEventListener('click', () => {
+    fetch('/open?settings=1', { cache: 'no-store' }).then(r => { if (!r.ok) throw 0; setStatus(true); }).catch(offline);
+  });
+
   // Heartbeat so the dot turns red when the box or Wi-Fi drops, even without pressing anything.
   function ping() {
     if (document.hidden) return;
@@ -200,7 +227,7 @@ final class Page {
       .catch(offline)
       .finally(() => clearTimeout(t));
   }
-  setInterval(ping, 10000);
+  setInterval(() => { ping(); if (!document.hidden) checkPower(); }, 10000);
   document.addEventListener('visibilitychange', ping);
   window.addEventListener('online', ping);
   window.addEventListener('offline', offline);

@@ -9,11 +9,12 @@ Control remoto web para un TV Box Android, sin publicidad y sin instalar nada en
 La caja (app **Control Web**, ~150 KB) sirve una página en `http://<IP de la caja>:8080`. Desde el
 navegador del celular, en la misma red WiFi, tienes:
 
-- **Flechas, OK, Atrás, Inicio, Menú, volumen, silencio y reproducir/pausa.** Mantener pulsado funciona.
+- **Flechas, OK, Atrás, Inicio, Ajustes, volumen, silencio y reproducir/pausa.** Mantener pulsado funciona.
 - **Teclado:** escribes con el teclado del celular y el texto aparece en vivo en el cuadro de texto
   seleccionado en la tele (tildes, ñ y emoji incluidos). Enter busca.
 - **Cursor:** muestra una flecha de mouse en la tele; las flechas la mueven (acelera si mantienes) y
   OK hace clic donde está. Útil en apps que no se manejan bien con flechas.
+- **Encender y apagar:** botón rojo (apagar, con confirmación) o verde (encender desde reposo). La app mantiene el WiFi activo en reposo para poder despertarla.
 - **Números** 0–9.
 - **Sonido de botones** (una "gota" corta generada en el celular) que se activa o desactiva con el
   ícono de altavoz; la elección se recuerda.

@@ -5,7 +5,9 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
 import android.content.Intent;
+import android.net.wifi.WifiManager;
 import android.os.IBinder;
+import android.os.PowerManager;
 import android.os.Process;
 
 import java.io.BufferedReader;
@@ -43,6 +45,8 @@ public class KeyService extends Service {
 
     private ServerSocket server;
     private FileOutputStream device;
+    private PowerManager.WakeLock wakeLock;
+    private WifiManager.WifiLock wifiLock;
 
     @Override
     public void onCreate() {
@@ -54,6 +58,13 @@ public class KeyService extends Service {
                 .setSmallIcon(android.R.drawable.ic_media_play)
                 .build();
         startForeground(1, n);
+
+        // Stay reachable in standby so the phone can wake the box again.
+        wakeLock = getSystemService(PowerManager.class).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "control:server");
+        wakeLock.acquire();
+        wifiLock = ((WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE))
+                .createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "control:server");
+        wifiLock.acquire();
 
         Thread t = new Thread(this::serve, "control-http");
         t.setDaemon(true);
@@ -74,6 +85,8 @@ public class KeyService extends Service {
     public void onDestroy() {
         try { if (server != null) server.close(); } catch (IOException ignored) { }
         try { if (device != null) device.close(); } catch (IOException ignored) { }
+        if (wakeLock != null && wakeLock.isHeld()) wakeLock.release();
+        if (wifiLock != null && wifiLock.isHeld()) wifiLock.release();
         super.onDestroy();
     }
 
@@ -117,6 +130,23 @@ public class KeyService extends Service {
             respond(s, "200 OK", "application/manifest+json", Page.MANIFEST.getBytes(StandardCharsets.UTF_8));
         } else if (ICONS.contains(path)) {
             respond(s, "200 OK", "image/png", asset(path.substring(1)));
+        } else if (path.equals("/power")) {
+            boolean on = getSystemService(PowerManager.class).isInteractive();
+            respond(s, "200 OK", "application/json", ("{\"on\":" + on + "}").getBytes(StandardCharsets.US_ASCII));
+        } else if (path.equals("/power?toggle=1")) {
+            // KEY_POWER on the IR receiver: sleeps the box when on, wakes it when in standby.
+            boolean ok = sendKey(116, 1) && sendKey(116, 0);
+            respond(s, ok ? "204 No Content" : "500 Internal Server Error", "text/plain", new byte[0]);
+        } else if (path.equals("/open?settings=1")) {
+            // Allowed from the background because the system binds this app's IME/accessibility service.
+            boolean ok;
+            try {
+                startActivity(new Intent(android.provider.Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                ok = true;
+            } catch (RuntimeException e) {
+                ok = false;
+            }
+            respond(s, ok ? "204 No Content" : "500 Internal Server Error", "text/plain", new byte[0]);
         } else if (path.equals("/ime")) {
             respond(s, "200 OK", "application/json", ("{\"active\":" + PhoneIme.active() + "}").getBytes(StandardCharsets.US_ASCII));
         } else if (path.startsWith("/txt?")) {
