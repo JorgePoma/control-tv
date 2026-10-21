@@ -1,0 +1,6 @@
+out/
+.tools/
+venv/
+*.jks
+*.keystore
+preview.png
