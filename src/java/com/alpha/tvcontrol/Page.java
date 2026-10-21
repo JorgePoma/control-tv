@@ -40,6 +40,12 @@ final class Page {
   main { max-width:420px; margin:0 auto; padding:20px 16px 28px; display:flex; flex-direction:column; gap:22px; min-height:100%; }
   header { display:flex; justify-content:space-between; align-items:center; }
   h1 { font-size:17px; font-weight:600; margin:0; }
+  .top { display:flex; align-items:center; gap:12px; }
+  button.icon { width:36px; height:36px; border-radius:50%; padding:0; }
+  button.icon svg { width:19px; height:19px; }
+  #snd .off-ic, #snd.muted .on-ic { display:none; }
+  #snd.muted .off-ic { display:block; }
+  #snd.muted { color:var(--dim); }
   #st { font-size:13px; color:var(--dim); display:flex; align-items:center; gap:7px; }
   #st::before { content:""; width:9px; height:9px; border-radius:50%; background:#3ddc84;
     box-shadow:0 0 0 3px rgba(61,220,132,.18); }
@@ -82,7 +88,16 @@ final class Page {
 </head>
 <body>
 <main>
-  <header><h1>Control TV</h1><span id="st">Conectado</span></header>
+  <header>
+    <h1>Control TV</h1>
+    <div class="top">
+      <span id="st">Conectado</span>
+      <button id="snd" class="icon" aria-label="Sonido de botones">
+        <svg class="on-ic" viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>
+        <svg class="off-ic" viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="m16 9 5 6M21 9l-5 6"/></svg>
+      </button>
+    </div>
+  </header>
 
 
   <div class="row">
@@ -142,6 +157,39 @@ final class Page {
       .then(r => { if (!r.ok) throw 0; setStatus(true); })
       .catch(offline);
   }
+  // Button sound: a short synthesized "drop" (pitch falling fast), no audio files.
+  const snd = document.getElementById('snd');
+  let soundOn = true, audio = null;
+  try { soundOn = localStorage.getItem('sound') !== 'off'; } catch (e) { }
+  snd.classList.toggle('muted', !soundOn);
+  snd.addEventListener('click', () => {
+    soundOn = !soundOn;
+    snd.classList.toggle('muted', !soundOn);
+    try { localStorage.setItem('sound', soundOn ? 'on' : 'off'); } catch (e) { }
+    if (soundOn) drop();
+  });
+  function drop() {
+    if (!soundOn) return;
+    try {
+      audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+      if (audio.state === 'suspended') audio.resume();
+      const t = audio.currentTime, o = audio.createOscillator(), g = audio.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(1150, t);
+      o.frequency.exponentialRampToValueAtTime(380, t + 0.07);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.35, t + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.11);
+      o.connect(g).connect(audio.destination);
+      o.start(t);
+      o.stop(t + 0.12);
+    } catch (e) { }
+  }
+  document.addEventListener('pointerdown', e => {
+    const b = e.target.closest('button');
+    if (b && b !== snd) drop();
+  }, true);
+
   // Heartbeat so the dot turns red when the box or Wi-Fi drops, even without pressing anything.
   function ping() {
     if (document.hidden) return;

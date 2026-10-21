@@ -11,6 +11,9 @@ navegador del celular, en la misma red WiFi, tienes:
 - **Cursor:** muestra una flecha de mouse en la tele; las flechas la mueven (acelera si mantienes) y
   OK hace clic donde está. Útil en apps que no se manejan bien con flechas.
 - **Números** 0–9.
+- **Sonido de botones** (una "gota" corta generada en el celular) que se activa o desactiva con el
+  ícono de altavoz; la elección se recuerda.
+- **Indicador de conexión:** punto verde o rojo, comprobado cada 10 segundos mientras la página está visible.
 
 En Chrome: ⋮ → *Agregar a la pantalla principal* para tenerlo como ícono.
 
