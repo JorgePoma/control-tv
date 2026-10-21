@@ -4,3 +4,4 @@ venv/
 *.jks
 *.keystore
 preview.png
+.shots/
