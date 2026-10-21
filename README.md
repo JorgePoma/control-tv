@@ -3,7 +3,7 @@
 Control remoto web para un TV Box Android, sin publicidad y sin instalar nada en el celular.
 
 <p align="center">
-  <img src="docs/screenshots.png" alt="Control TV en el celular: a la izquierda la vista principal con el estado de conexión, los botones de encendido y sonido, Atrás, Inicio, Ajustes, las flechas con OK, volumen, teclado y cursor; a la derecha la sección de números desplegada" width="640">
+  <img src="docs/screenshots-v1.9.png" alt="Control TV en el celular: a la izquierda la vista principal con el estado de conexión, los botones de encendido y sonido, Atrás, Inicio, Ajustes, las flechas con OK, volumen, teclado y cursor; a la derecha la sección de números desplegada" width="640">
 </p>
 
 La caja (app **Control Web**, ~150 KB) sirve una página en `http://<IP de la caja>:8080`. Desde el
