@@ -40,8 +40,11 @@ final class Page {
   main { max-width:420px; margin:0 auto; padding:20px 16px 28px; display:flex; flex-direction:column; gap:22px; min-height:100%; }
   header { display:flex; justify-content:space-between; align-items:center; }
   h1 { font-size:17px; font-weight:600; margin:0; }
-  #st { font-size:13px; color:var(--dim); }
+  #st { font-size:13px; color:var(--dim); display:flex; align-items:center; gap:7px; }
+  #st::before { content:""; width:9px; height:9px; border-radius:50%; background:#3ddc84;
+    box-shadow:0 0 0 3px rgba(61,220,132,.18); }
   #st.err { color:#ff6b6b; }
+  #st.err::before { background:#ff5252; box-shadow:0 0 0 3px rgba(255,82,82,.2); }
   button { border:0; background:var(--btn); color:var(--fg); font:inherit; font-size:15px; border-radius:16px;
     display:flex; align-items:center; justify-content:center; gap:6px; cursor:pointer; touch-action:none; }
   button.on { background:var(--btn-on); transform:scale(.96); }
@@ -129,19 +132,38 @@ final class Page {
 <script>
   const st = document.getElementById('st');
   let chain = Promise.resolve();
+  function setStatus(ok, text) {
+    st.textContent = text || (ok ? 'Conectado' : 'Desconectado');
+    st.className = ok ? '' : 'err';
+  }
+  function offline() { setStatus(false); }
   function send(k, v) {
     chain = chain.then(() => fetch('/k?c=' + k + '&v=' + v, { cache: 'no-store' }))
-      .then(r => { if (!r.ok) throw 0; st.textContent = 'Conectado'; st.className = ''; })
-      .catch(() => { st.textContent = 'Sin conexión'; st.className = 'err'; });
+      .then(r => { if (!r.ok) throw 0; setStatus(true); })
+      .catch(offline);
   }
+  // Heartbeat so the dot turns red when the box or Wi-Fi drops, even without pressing anything.
+  function ping() {
+    if (document.hidden) return;
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), 3000);
+    fetch('/cur', { cache: 'no-store', signal: ctl.signal })
+      .then(r => { if (!r.ok) throw 0; if (st.className === 'err') setStatus(true); })
+      .catch(offline)
+      .finally(() => clearTimeout(t));
+  }
+  setInterval(ping, 4000);
+  document.addEventListener('visibilitychange', ping);
+  window.addEventListener('online', ping);
+  window.addEventListener('offline', offline);
   // Cursor mode: arrows glide a pointer on the TV, OK taps where it is.
   const DIRS = { 103: [0, -1], 108: [0, 1], 105: [-1, 0], 106: [1, 0] };
   const curBtn = document.getElementById('cur'), pad = document.querySelector('.pad');
   let cursorOn = false;
   function req(url) {
     chain = chain.then(() => fetch(url, { cache: 'no-store' }))
-      .then(r => { if (r.status === 409) { setCursor(false); st.textContent = 'Cursor no disponible'; st.className = 'err'; } })
-      .catch(() => { st.textContent = 'Sin conexión'; st.className = 'err'; });
+      .then(r => { if (r.status === 409) { setCursor(false); setStatus(false, 'Cursor no disponible'); } else setStatus(true); })
+      .catch(offline);
   }
   function setCursor(on) {
     cursorOn = on;
@@ -183,8 +205,8 @@ final class Page {
   let poll = null, timer = null;
   function txt(q) {
     chain = chain.then(() => fetch('/txt?' + q, { cache: 'no-store' }))
-      .then(r => { if (r.status === 409) setHint(false); })
-      .catch(() => { st.textContent = 'Sin conexión'; st.className = 'err'; });
+      .then(r => { setStatus(true); if (r.status === 409) setHint(false); })
+      .catch(offline);
   }
   function setHint(ready) {
     kbh.textContent = ready ? 'Escribiendo en la tele' : 'Selecciona un cuadro de texto en la tele';
